@@ -296,8 +296,37 @@ const SupplierDashboard = () => {
                       <button
                         className="px-4 py-2 text-white rounded-lg font-semibold hover:opacity-90 transition-colors shadow-md"
                         style={{ background: '#457b9b' }}
-                        onClick={() => {
-                          setToastMsg(`Offer was sent to ${req.requester}`);
+                        onClick={async () => {
+                          const token = localStorage.getItem('token');
+                          const requestId = req.id || req.requestId; // adjust as needed
+                          // Compose offer data from req (adjust field mapping as needed)
+                          const offerData = {
+                            offerType: req.offerType || 'Supply',
+                            price: req.price || 0,
+                            description: req.details || '',
+                            equityPercentage: req.equityPercentage || undefined,
+                            durationInDays: req.durationInDays || undefined,
+                            items: req.items || [],
+                            // attachments: [] // Add if you support file uploads
+                          };
+                          try {
+                            const res = await fetch(`https://backendelevante-production.up.railway.app/api/offers/${requestId}`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                              },
+                              body: JSON.stringify(offerData)
+                            });
+                            const result = await res.json();
+                            if (res.ok) {
+                              setToastMsg('Offer was sent successfully!');
+                            } else {
+                              setToastMsg(result.message || 'Failed to send offer');
+                            }
+                          } catch (err) {
+                            setToastMsg('Error sending offer');
+                          }
                           setShowToast(true);
                           setTimeout(() => setShowToast(false), 3000);
                         }}
