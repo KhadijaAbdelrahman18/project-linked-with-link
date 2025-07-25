@@ -25,8 +25,16 @@ const MarketplaceFiltersSupp = ({
   onToggleFilters,
   searchQuery,
   onSearchChange,
-  getActiveFiltersCount
+  getActiveFiltersCount: getActiveFiltersCountProp
 }) => {
+  // Provide a fallback for getActiveFiltersCount if not passed as a prop
+  const getActiveFiltersCount = getActiveFiltersCountProp || (() => {
+    // Count non-empty fields in the current filters
+    const filters = getCurrentFilters();
+    return Object.values(filters).filter(
+      v => (typeof v === 'string' ? v.trim() !== '' : v)
+    ).length;
+  });
   // Separate filter states for each tab
   const [supplierFilters, setSupplierFilters] = useState({
     category: '',

@@ -527,11 +527,41 @@ const MarketplaceSupp = () => {
               : 'grid-cols-1'
               }`}>
               {paginatedData.map((item, idx) => (
-                <ProductCard 
-                  key={item.id || idx} 
-                  product={item} 
-                  onViewDetails={handleViewProductDetails} 
+                <ProductCard
+                  key={item.id || idx}
+                  product={item}
+                  onViewDetails={handleViewProductDetails}
                   isService={supplierType === 'services'}
+                  onDelete={async () => {
+                    const type = supplierType === 'services' ? 'service' : 'product';
+                    if (window.confirm('Are you sure you want to delete this item?')) {
+                      const url = type === 'product'
+                        ? `https://backendelevante-production.up.railway.app/api/products/${item.id}`
+                        : `https://backendelevante-production.up.railway.app/api/services/${item.id}`;
+                      try {
+                        const res = await fetch(url, {
+                          method: 'DELETE',
+                          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                        });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.message === 'Deleted successfully' || data.status === 'success')) {
+                          if (type === 'product') {
+                            setSupplierData(prev => prev.filter(p => p.id !== item.id));
+                          } else {
+                            setServiceData(prev => prev.filter(s => s.id !== item.id));
+                          }
+                        } else {
+                          alert('Failed to delete: ' + (data.message || 'Unknown error'));
+                        }
+                      } catch (err) {
+                        alert('Failed to delete: ' + err.message);
+                      }
+                    }
+                  }}
+                  onEdit={() => {
+                    // You can implement edit modal logic here
+                    // setEditModal({ type: supplierType === 'services' ? 'service' : 'product', data: item });
+                  }}
                 />
               ))}
             </div>
