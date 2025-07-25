@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { Edit, Eye, Star } from 'lucide-react';
 
-const ProductCard = ({ product, onViewDetails, isService, onToggleAvailability }) => {
-  // For services, manage local availability state if not managed by parent
+
+// ...existing code...
+
+
+const ProductCard = ({ product, onViewDetails, isService, onToggleAvailability, onEdit, onDelete }) => {
   const [available, setAvailable] = useState(
     typeof product.availableNow === 'boolean' ? product.availableNow : true
   );
@@ -68,10 +71,19 @@ const ProductCard = ({ product, onViewDetails, isService, onToggleAvailability }
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
-        <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-lg transition-colors duration-200">
+      <div className="flex items-center gap-3 mt-4">
+        <button
+          onClick={onEdit}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-blue-600 rounded-lg transition-colors duration-200"
+        >
           <Edit className="w-4 h-4" />
           <span className="text-sm font-medium">Edit</span>
+        </button>
+        <button
+          onClick={onDelete}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100 text-red-600 rounded-lg transition-colors duration-200"
+        >
+          <span className="text-sm font-medium">Delete</span>
         </button>
         <button 
           onClick={() => onViewDetails(product)}

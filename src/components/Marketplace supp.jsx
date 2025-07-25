@@ -42,14 +42,12 @@ const MarketplaceSupp = () => {
   const [supplierType, setSupplierType] = useState('products');
   const [supplierData, setSupplierData] = useState([]);
   const [serviceData, setServiceData] = useState([]);
-  const [servicesData, setServicesData] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [viewMode, setViewMode] = useState('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [supplierFilters, setSupplierFilters] = useState({});
   const [serviceFilters, setServiceFilters] = useState({});
-  const [servicesFilters, setServicesFilters] = useState({});
   const [showFilters, setShowFilters] = useState(false);
   const [showAddModal, setShowAddModal] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -100,15 +98,26 @@ const MarketplaceSupp = () => {
     try {
       const formData = new FormData();
       Object.entries(newProduct).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
+        if (key === 'image' && value) {
+          formData.append('images', value); // Backend expects 'images' (plural)
+        } else if (value && key !== 'image') {
+          formData.append(key, value);
+        }
       });
-      const res = await fetch('http://localhost:5000/api/products', {
+      // Optionally set isActive to true by default
+      formData.append('isActive', 'true');
+      const token = localStorage.getItem('token');
+      // Do not set Content-Type header manually for FormData
+      const res = await fetch('https://backendelevante-production.up.railway.app/api/products', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
       if (!res.ok) throw new Error('Failed to upload product');
       const added = await res.json();
-      setSupplierData(prev => [...prev, added]);
+      setSupplierData(prev => [...prev, added.data || added]);
       setShowAddModal(null);
       setNewProduct({ name: '', category: '', price: '', stock: '', description: '', image: null });
     } catch (err) {
@@ -126,15 +135,26 @@ const MarketplaceSupp = () => {
     try {
       const formData = new FormData();
       Object.entries(newService).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
+        if (key === 'image' && value) {
+          formData.append('images', value); // Backend expects 'images' (plural)
+        } else if (value && key !== 'image') {
+          formData.append(key, value);
+        }
       });
-      const res = await fetch('http://localhost:5000/api/services', {
+      // Optionally set isActive to true by default
+      formData.append('isActive', 'true');
+      const token = localStorage.getItem('token');
+      // Do not set Content-Type header manually for FormData
+      const res = await fetch('https://backendelevante-production.up.railway.app/api/services', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       });
       if (!res.ok) throw new Error('Failed to upload service');
       const added = await res.json();
-      setServiceData(prev => [...prev, added]);
+      setServiceData(prev => [...prev, added.service]);
       setShowAddModal(null);
       setNewService({ name: '', category: '', price: '', description: '', image: null });
     } catch (err) {
@@ -147,7 +167,7 @@ const MarketplaceSupp = () => {
   // Get current data based on active tab and supplier type
   const getCurrentData = () => {
     if (activeTab === 'services') {
-      return servicesData;
+      return serviceData;
     } else if (activeTab === 'suppliers') {
       if (supplierType === 'products') {
         return supplierData;
@@ -164,14 +184,14 @@ const MarketplaceSupp = () => {
   const currentFilters = activeTab === 'suppliers' ?
     (supplierType === 'products' ? supplierFilters :
       supplierType === 'services' ? serviceFilters :
-        supplierFilters) : servicesFilters;
+        supplierFilters) : serviceFilters;
 
   // Filter and sort data
   const filteredData = useMemo(() => {
     let filtered = currentData.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = (item.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.category || '').toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesFilters = Object.keys(currentFilters).every(key => {
         if (!currentFilters[key] || currentFilters[key] === '') return true;
@@ -228,7 +248,7 @@ const MarketplaceSupp = () => {
         setServiceFilters(newFilters);
       }
     } else if (activeTab === 'services') {
-      setServicesFilters(newFilters);
+      setServiceFilters(newFilters);
     }
     setCurrentPage(1);
   };
@@ -238,7 +258,7 @@ const MarketplaceSupp = () => {
       setSupplierFilters({});
       setServiceFilters({});
     } else if (activeTab === 'services') {
-      setServicesFilters({});
+      setServiceFilters({});
     }
     setSearchQuery('');
     setCurrentPage(1);
@@ -246,7 +266,7 @@ const MarketplaceSupp = () => {
 
   const getActiveFiltersCount = () => {
     if (activeTab === 'services') {
-      return Object.values(servicesFilters).filter(value => value && value !== '').length;
+      return Object.values(serviceFilters).filter(value => value && value !== '').length;
     } else if (activeTab === 'suppliers') {
       if (supplierType === 'products') {
         return Object.values(supplierFilters).filter(value => value && value !== '').length;
@@ -320,6 +340,35 @@ const MarketplaceSupp = () => {
     setIsProductModalOpen(false);
     setSelectedProduct(null);
   };
+
+  // Fetch products and services from backend on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    // Fetch products
+    fetch('https://backendelevante-production.up.railway.app/api/products', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        // If backend returns { products: [...] }
+        setSupplierData(data.products || data);
+      })
+      .catch(() => setSupplierData([]));
+    // Fetch services
+    fetch('https://backendelevante-production.up.railway.app/api/services', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(data => {
+        // If backend returns { services: [...] }
+        setServiceData(data.services || data);
+      })
+      .catch(() => setServiceData([]));
+  }, []);
 
   // Ensure products is active by default when navigating to this page
   useEffect(() => {
@@ -478,11 +527,41 @@ const MarketplaceSupp = () => {
               : 'grid-cols-1'
               }`}>
               {paginatedData.map((item, idx) => (
-                <ProductCard 
-                  key={item.id || idx} 
-                  product={item} 
-                  onViewDetails={handleViewProductDetails} 
+                <ProductCard
+                  key={item.id || idx}
+                  product={item}
+                  onViewDetails={handleViewProductDetails}
                   isService={supplierType === 'services'}
+                  onDelete={async () => {
+                    const type = supplierType === 'services' ? 'service' : 'product';
+                    if (window.confirm('Are you sure you want to delete this item?')) {
+                      const url = type === 'product'
+                        ? `https://backendelevante-production.up.railway.app/api/products/${item.id}`
+                        : `https://backendelevante-production.up.railway.app/api/services/${item.id}`;
+                      try {
+                        const res = await fetch(url, {
+                          method: 'DELETE',
+                          headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                        });
+                        const data = await res.json();
+                        if (res.ok && (data.success || data.message === 'Deleted successfully' || data.status === 'success')) {
+                          if (type === 'product') {
+                            setSupplierData(prev => prev.filter(p => p.id !== item.id));
+                          } else {
+                            setServiceData(prev => prev.filter(s => s.id !== item.id));
+                          }
+                        } else {
+                          alert('Failed to delete: ' + (data.message || 'Unknown error'));
+                        }
+                      } catch (err) {
+                        alert('Failed to delete: ' + err.message);
+                      }
+                    }
+                  }}
+                  onEdit={() => {
+                    // You can implement edit modal logic here
+                    // setEditModal({ type: supplierType === 'services' ? 'service' : 'product', data: item });
+                  }}
                 />
               ))}
             </div>
